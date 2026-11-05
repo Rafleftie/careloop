@@ -1,0 +1,114 @@
+{% extends "patient_base.html" %}
+{% block title %}{{ t.journey }} · CareLoop{% endblock %}
+{% block content %}
+{% set done = 3 if attended else 2 %}
+<div class="flex flex-col px-margin gap-space-lg pt-space-md">
+
+  <section class="flex flex-col gap-space-xs">
+    <h1 class="font-headline-lg text-headline-lg text-on-surface font-extrabold">{{ t.hello }}, {{ d.first }}</h1>
+    <p class="font-body-md text-on-surface-variant">{{ t.home_sub }}</p>
+  </section>
+
+  {% if not consent.recorded %}
+  <a href="{{ base }}/consent?lang={{ lang }}" class="flex items-center gap-space-sm p-space-md rounded-xl bg-amber-50 text-amber-900 min-h-[56px]">
+    <span class="material-symbols-outlined text-[24px]">lock</span>
+    <span class="flex flex-col flex-1"><strong class="font-label-md">{{ t.consent_banner }}</strong><span class="font-body-sm text-[13px]">{{ t.consent_banner_sub }}</span></span>
+    <span class="material-symbols-outlined">chevron_right</span>
+  </a>
+  {% endif %}
+
+  <!-- Journey -->
+  <section class="bg-surface-container-lowest rounded-xl p-space-md shadow-sm">
+    <div class="flex items-center justify-between mb-space-md">
+      <span class="font-label-lg font-bold">{{ t.journey }}</span>
+      <span class="px-2.5 py-1 rounded-full bg-tertiary-fixed text-on-tertiary-fixed font-label-sm font-semibold">{{ t.steps_done.format(n=done) }}</span>
+    </div>
+    <div class="relative flex items-start justify-between">
+      <div class="absolute top-5 left-6 right-6 h-1 bg-surface-container-highest"></div>
+      <div class="absolute top-5 left-6 h-1 bg-primary" style="width: calc((100% - 3rem) * {{ (done - 1) / 3 }})"></div>
+      {% set steps = [(t.s_screened, d.screened_label, 'check', 1), (t.s_referred, d.referred_label, 'check', 2), (t.s_visit, d.appt_label, 'local_hospital', 3), (t.s_treat, '', 'health_and_safety', 4)] %}
+      {% for label, sub, icon, n in steps %}
+      <div class="relative z-10 flex flex-col items-center text-center flex-1 px-1">
+        {% if n < done %}
+          <div class="w-10 h-10 rounded-full bg-primary flex items-center justify-center text-on-primary shadow-sm"><span class="material-symbols-outlined text-[22px]">check</span></div>
+          <span class="font-label-md font-bold mt-2">{{ label }}</span>
+        {% elif n == done %}
+          <div class="relative flex items-center justify-center"><span class="absolute w-12 h-12 rounded-full bg-primary/20 animate-ping"></span><div class="relative w-10 h-10 rounded-full bg-primary-container text-on-primary flex items-center justify-center shadow-md"><span class="material-symbols-outlined text-[22px]">{{ icon }}</span></div></div>
+          <span class="font-label-md font-bold mt-2 text-primary">{{ label }}</span>
+        {% else %}
+          <div class="w-10 h-10 rounded-full bg-surface-container-high text-outline flex items-center justify-center"><span class="material-symbols-outlined text-[20px]">{{ icon }}</span></div>
+          <span class="font-label-md font-semibold mt-2 text-outline">{{ label }}</span>
+        {% endif %}
+        <span class="font-label-sm text-[11px] text-on-surface-variant leading-tight mt-0.5">{{ sub if n <= done else '' }}</span>
+      </div>
+      {% endfor %}
+    </div>
+  </section>
+
+  {% if attended %}
+  <section class="bg-emerald-50 text-emerald-900 rounded-xl p-space-md flex items-start gap-space-sm">
+    <span class="material-symbols-outlined fill text-[28px]">task_alt</span>
+    <div><h2 class="font-headline-md text-headline-md">{{ t.attended_title }}</h2><p class="font-body-sm mt-1">{{ t.attended_sub }}</p></div>
+  </section>
+  {% else %}
+  <!-- Next step -->
+  <section class="bg-surface-container-lowest rounded-xl p-space-md shadow-md flex flex-col gap-space-md">
+    <div class="flex items-center justify-between gap-space-xs">
+      <span class="inline-flex items-center gap-1.5 px-3 py-1.5 rounded-full bg-amber-100 text-amber-900 font-label-sm font-bold uppercase tracking-wide">
+        <span class="material-symbols-outlined text-[18px]">event_upcoming</span>{{ t.appointment }} • {{ d.appt_label }}
+      </span>
+      <span class="font-label-sm text-primary font-bold">{{ d.appt_time }}</span>
+    </div>
+    <div>
+      <h2 class="font-headline-lg-mobile text-[22px] leading-[30px] font-extrabold font-headline-md">Ruiru Sub-County Hospital</h2>
+      <p class="font-body-sm text-on-surface-variant mt-1">{{ t.distance.format(km=d.distance_km) }}</p>
+    </div>
+    {% if d.rescheduled %}
+    <div class="flex items-start gap-space-sm p-space-sm rounded-xl bg-tertiary-fixed text-on-tertiary-fixed">
+      <span class="material-symbols-outlined text-[22px]">event_repeat</span>
+      <p class="font-body-sm">{{ t.rescheduled_note.format(when=d.appt_label ~ ', ' ~ d.appt_time) }}</p>
+    </div>
+    {% endif %}
+    <div class="flex items-start gap-space-sm p-space-sm rounded-xl bg-surface-container-high">
+      <span class="material-symbols-outlined text-[22px] text-tertiary mt-0.5">badge</span>
+      <p class="font-body-sm text-on-surface-variant">{{ t.bring }}</p>
+    </div>
+    <div class="flex flex-col gap-space-sm">
+      {% if confirmed %}
+      <div class="w-full min-h-[48px] px-space-md py-3 rounded-xl bg-emerald-100 text-emerald-900 font-label-lg flex items-center justify-center gap-2"><span class="material-symbols-outlined fill">check_circle</span>{{ t.confirmed }}</div>
+      {% else %}
+      <button id="confirm" class="w-full min-h-[48px] px-space-md py-3 rounded-xl bg-primary hover:bg-primary-container text-on-primary font-label-lg flex items-center justify-center gap-2 shadow-sm"><span class="material-symbols-outlined text-[22px]">thumb_up</span>{{ t.confirm_attend }}</button>
+      {% endif %}
+      <a target="_blank" rel="noopener" href="https://www.google.com/maps/search/?api=1&query=Ruiru+Sub-County+Hospital" class="w-full min-h-[48px] px-space-md py-3 rounded-xl bg-surface-container hover:bg-surface-container-high text-primary font-label-lg flex items-center justify-center gap-2"><span class="material-symbols-outlined text-[22px]">navigation</span>{{ t.directions }}</a>
+      <a href="{{ base }}/reschedule?lang={{ lang }}" class="w-full min-h-[48px] px-space-md py-3 rounded-xl bg-surface-container hover:bg-surface-container-high text-primary font-label-lg flex items-center justify-center gap-2"><span class="material-symbols-outlined text-[22px]">edit_calendar</span>{{ t.change_appt }}</a>
+      <a href="tel:0712345678" class="w-full min-h-[48px] px-space-md py-3 rounded-xl bg-tertiary-fixed text-on-tertiary-fixed font-label-lg flex items-center justify-center gap-2"><span class="material-symbols-outlined text-[22px]">phone_in_talk</span>{{ t.call_chw.format(name=chw_first) }}</a>
+    </div>
+  </section>
+  {% endif %}
+
+  <!-- About the result -->
+  <section class="bg-surface-container-lowest rounded-xl p-space-md shadow-sm flex flex-col gap-space-md">
+    <div class="flex items-center gap-2"><span class="material-symbols-outlined text-[24px] text-primary">favorite</span><h3 class="font-headline-md text-headline-md">{{ t.about_result }}</h3></div>
+    <p class="font-body-md text-on-surface-variant leading-relaxed">{{ t.result_body }}</p>
+    <p class="font-body-sm text-on-surface-variant">{{ t.result_note }}</p>
+    <div class="flex items-center justify-between gap-space-sm p-space-sm rounded-xl bg-surface-container">
+      <div class="flex items-center gap-space-sm min-w-0">
+        <div class="w-12 h-12 rounded-full bg-primary/15 text-primary font-bold flex items-center justify-center">{{ d.chw.split()[0][0] }}{{ d.chw.split()[-1][0] }}</div>
+        <div class="flex flex-col min-w-0"><span class="font-label-md font-bold truncate">{{ d.chw }}</span><span class="font-body-sm text-on-surface-variant truncate">{{ t.chw_role }}</span></div>
+      </div>
+      <a href="tel:0712345678" aria-label="Call" class="min-w-[48px] min-h-[48px] w-12 h-12 rounded-full bg-primary text-on-primary flex items-center justify-center shrink-0"><span class="material-symbols-outlined">call</span></a>
+    </div>
+  </section>
+</div>
+{% endblock %}
+
+{% block scripts %}
+<script>
+  const btn = document.getElementById("confirm");
+  if (btn) btn.onclick = async () => {
+    btn.disabled = true;
+    await fetch("/api/patient/{{ rid }}/confirm", { method: "POST" });
+    location.reload();
+  };
+</script>
+{% endblock %}

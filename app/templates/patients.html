@@ -1,0 +1,129 @@
+{% extends "base.html" %}
+{% block title %}Patients at Risk · CareLoop{% endblock %}
+{% block content %}
+{% macro chip(level, pct) -%}
+  <span class="font-bold {{ {'High':'text-error','Medium':'text-amber-700','Low':'text-emerald-700'}[level] }}">{{ pct }}%</span>
+  <span class="px-2 py-0.5 rounded-full {{ {'High':'bg-error-container text-on-error-container','Medium':'bg-amber-100 text-amber-800','Low':'bg-emerald-100 text-emerald-800'}[level] }} font-label-sm text-[11px] font-bold">{{ level }}</span>
+{%- endmacro %}
+<div class="p-gutter md:p-gutter-desktop flex flex-col gap-space-lg max-w-[1440px] mx-auto w-full">
+
+  <div class="flex flex-col lg:flex-row lg:items-end justify-between gap-space-md">
+    <div class="flex flex-col gap-space-xs">
+      <div class="flex items-center gap-space-xs text-on-surface-variant font-label-sm text-label-sm">
+        <span>Clinical Workflow</span><span class="material-symbols-outlined text-[14px]">chevron_right</span><span class="text-primary font-semibold">Patients</span>
+      </div>
+      <h1 class="font-headline-xl text-headline-xl tracking-tight">Patients at Risk of Missing Follow-up</h1>
+      <p class="font-body-md text-body-md text-on-surface-variant max-w-2xl">Risk scores are predicted by the CareLoop model from distance, past attendance, waiting time and reminder responses. A high score means the patient needs more support.</p>
+    </div>
+    <span class="inline-flex items-center gap-space-xs px-3 py-1.5 rounded-full bg-primary/10 text-primary font-label-sm text-label-sm self-start">
+      <span class="w-2 h-2 rounded-full bg-primary"></span>Upcoming visits • {{ month }}
+    </span>
+  </div>
+
+  <!-- Top 5 -->
+  <div class="flex flex-col gap-space-sm">
+    <div class="flex items-center gap-space-sm">
+      <span class="material-symbols-outlined text-error text-[22px]">notification_important</span>
+      <h2 class="font-headline-md text-headline-md">Top 5 patients to contact today</h2>
+    </div>
+    <div class="grid grid-cols-1 md:grid-cols-2 xl:grid-cols-5 gap-space-sm">
+      {% for d in top5 %}
+      <div class="p-space-sm rounded-xl bg-surface-container-lowest shadow-sm flex flex-col gap-space-xs">
+        <div class="flex items-center justify-between gap-space-xs">
+          <div class="flex items-center gap-space-sm min-w-0">
+            <div class="w-10 h-10 rounded-full bg-primary/15 text-primary font-bold flex items-center justify-center font-label-md text-label-md shrink-0">{{ d.initials }}</div>
+            <div class="flex flex-col min-w-0">
+              <span class="font-label-md text-label-md font-bold truncate">{{ d.name }}</span>
+              <span class="font-label-sm text-on-surface-variant text-[12px]">{{ d.code }} • {{ d.ward }}</span>
+            </div>
+          </div>
+        </div>
+        <div class="flex items-center gap-1.5">{{ chip(d.risk_level, d.pct) }}</div>
+        <p class="font-body-sm text-body-sm text-on-surface-variant text-[13px] flex-1">{{ d.reasons[0].text if d.reasons else 'Standard follow-up' }}{% if d.reasons|length > 1 %}; {{ d.reasons[1].text|lower }}{% endif %}.</p>
+        <a href="/patients/{{ d.referral_id }}" class="w-full flex items-center justify-center gap-1.5 px-3 py-2.5 rounded-lg bg-primary text-on-primary font-label-md text-label-md hover:bg-primary-container transition-colors min-h-[48px]">
+          <span>{{ d.rec.short }}</span><span class="material-symbols-outlined text-[16px]">arrow_forward</span>
+        </a>
+      </div>
+      {% endfor %}
+    </div>
+  </div>
+
+  <!-- Filters -->
+  <form method="get" class="p-space-md bg-surface-container-lowest rounded-xl shadow-sm">
+    <div class="grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-12 gap-space-md items-center">
+      <div class="lg:col-span-4 relative flex items-center">
+        <span class="material-symbols-outlined absolute left-3 text-on-surface-variant text-[20px] pointer-events-none">search</span>
+        <input name="q" value="{{ q }}" class="w-full pl-10 pr-4 py-3 bg-surface-container-low rounded-lg outline-none focus:ring-2 focus:ring-primary min-h-[48px]" placeholder="Search by patient name or ID..." type="text"/>
+      </div>
+      <select name="ward" onchange="this.form.submit()" class="lg:col-span-3 px-4 py-3 bg-surface-container-low rounded-lg outline-none focus:ring-2 focus:ring-primary min-h-[48px]">
+        <option value="">All wards</option>
+        {% for w in wards %}<option value="{{ w }}" {% if w == ward %}selected{% endif %}>{{ w }}</option>{% endfor %}
+      </select>
+      <select name="screening" onchange="this.form.submit()" class="lg:col-span-2 px-4 py-3 bg-surface-container-low rounded-lg outline-none focus:ring-2 focus:ring-primary min-h-[48px]">
+        <option value="">All screening types</option>
+        {% for s in ['VIA','HPV','Pap smear'] %}<option value="{{ s }}" {% if s == screening %}selected{% endif %}>{{ s }}</option>{% endfor %}
+      </select>
+      <select name="risk" onchange="this.form.submit()" class="lg:col-span-2 px-4 py-3 bg-surface-container-low rounded-lg outline-none focus:ring-2 focus:ring-primary min-h-[48px]">
+        <option value="">All risk levels</option>
+        {% for r in ['High','Medium','Low'] %}<option value="{{ r }}" {% if r == risk %}selected{% endif %}>{{ r }} risk</option>{% endfor %}
+      </select>
+      <a href="/patients" class="lg:col-span-1 px-3 py-3 text-primary font-label-md text-label-md hover:bg-surface-container-low rounded-lg flex items-center justify-center gap-1 min-h-[48px]"><span class="material-symbols-outlined text-[18px]">restart_alt</span>Reset</a>
+    </div>
+  </form>
+
+  <!-- Table: the AI columns (why flagged, recommended action) are always visible -->
+  <div class="bg-surface-container-lowest rounded-xl shadow-sm overflow-hidden">
+    <div class="overflow-x-auto">
+      <table class="w-full text-left border-collapse">
+        <thead>
+          <tr class="bg-primary-container text-on-primary font-label-sm text-label-sm uppercase tracking-wider select-none">
+            <th class="py-3.5 px-4">Patient</th>
+            <th class="py-3.5 px-3">Ward</th>
+            <th class="py-3.5 px-3">Screening</th>
+            <th class="py-3.5 px-3">Visit</th>
+            <th class="py-3.5 px-3">Risk</th>
+            <th class="py-3.5 px-3">Why flagged</th>
+            <th class="py-3.5 px-3">Recommended action</th>
+            <th class="py-3.5 px-4 text-right"></th>
+          </tr>
+        </thead>
+        <tbody class="divide-y divide-surface-container-high font-body-sm text-body-sm">
+          {% for d in rows %}
+          <tr class="hover:bg-surface-container-low/80 transition-colors {{ 'bg-surface-container-low/30' if loop.index is even else '' }}">
+            <td class="py-3.5 px-4"><div class="flex flex-col"><span class="font-label-md text-label-md font-bold">{{ d.name }}</span><span class="text-on-surface-variant text-[12px]">{{ d.code }} • {{ d.age }} yrs</span></div></td>
+            <td class="py-3.5 px-3 text-on-surface-variant">{{ d.ward }}</td>
+            <td class="py-3.5 px-3"><span class="inline-block px-2 py-0.5 rounded bg-surface-container text-on-surface-variant text-[11px] font-semibold">{{ d.screening_type }}</span></td>
+            <td class="py-3.5 px-3 whitespace-nowrap"><div class="font-medium">{{ d.appt_short }}</div><div class="text-on-surface-variant text-[12px]">in {{ d.days_to_appt }} days{% if d.rescheduled %} • <span class="text-amber-800 font-semibold">changed</span>{% endif %}</div></td>
+            <td class="py-3.5 px-3"><div class="flex items-center gap-1.5 whitespace-nowrap">{{ chip(d.risk_level, d.pct) }}</div></td>
+            <td class="py-3.5 px-3">
+              <div class="flex flex-wrap gap-1 max-w-[260px]">
+                {% for r in d.reasons[:2] %}
+                <span class="px-2 py-0.5 rounded-full {{ 'bg-error-container/60 text-on-error-container' if d.risk_level == 'High' else 'bg-surface-container text-on-surface' }} text-[11px]">{{ r.text }}</span>
+                {% else %}
+                <span class="px-2 py-0.5 rounded-full bg-surface-container text-on-surface-variant text-[11px]">No risk factors stand out</span>
+                {% endfor %}
+              </div>
+            </td>
+            <td class="py-3.5 px-3 text-primary font-medium">{{ d.rec.short }}</td>
+            <td class="py-3.5 px-4 text-right"><a href="/patients/{{ d.referral_id }}" class="inline-flex items-center justify-center px-3 py-2 rounded-lg bg-surface-container-low text-primary hover:bg-primary hover:text-on-primary font-label-sm text-label-sm transition-colors min-h-[48px] min-w-[64px]">View<span class="material-symbols-outlined text-[16px] ml-0.5">arrow_forward</span></a></td>
+          </tr>
+          {% else %}
+          <tr><td colspan="8" class="py-10 text-center text-on-surface-variant">No patients match these filters.</td></tr>
+          {% endfor %}
+        </tbody>
+      </table>
+    </div>
+    <div class="p-space-md bg-surface-container-low/50 flex flex-col sm:flex-row items-center justify-between gap-space-sm">
+      <div class="font-label-sm text-label-sm text-on-surface-variant">Showing <strong class="text-on-surface">{{ start }}-{{ end }}</strong> of {{ total }} patients • <span class="italic">Demo data: synthetic patients only.</span></div>
+      <div class="flex items-center gap-1">
+        {% set qs = '&q=' ~ q ~ '&ward=' ~ ward ~ '&screening=' ~ screening ~ '&risk=' ~ risk %}
+        {% if page > 1 %}<a href="/patients?page={{ page - 1 }}{{ qs }}" class="w-9 h-9 rounded-lg bg-surface-container-lowest flex items-center justify-center text-on-surface-variant hover:bg-surface-container"><span class="material-symbols-outlined text-[18px]">chevron_left</span></a>{% endif %}
+        {% for p in range(1, pages + 1) %}
+        <a href="/patients?page={{ p }}{{ qs }}" class="w-9 h-9 rounded-lg font-label-sm text-label-sm flex items-center justify-center {{ 'bg-primary text-on-primary font-bold' if p == page else 'bg-surface-container-lowest text-on-surface-variant hover:bg-surface-container' }}">{{ p }}</a>
+        {% endfor %}
+        {% if page < pages %}<a href="/patients?page={{ page + 1 }}{{ qs }}" class="w-9 h-9 rounded-lg bg-surface-container-lowest flex items-center justify-center text-on-surface-variant hover:bg-surface-container"><span class="material-symbols-outlined text-[18px]">chevron_right</span></a>{% endif %}
+      </div>
+    </div>
+  </div>
+</div>
+{% endblock %}

@@ -1,0 +1,143 @@
+{
+  "n_referrals": 1244,
+  "miss_rate": 0.355,
+  "heldout_benchmark": {
+    "no_model_random": {
+      "recall_top20": 0.2,
+      "note": "random targeting reference"
+    },
+    "logistic_regression": {
+      "auc": 0.658,
+      "avg_precision": 0.526,
+      "recall_top20": 0.323,
+      "precision_top20": 0.573,
+      "recall_top30": 0.444,
+      "brier": 0.215
+    },
+    "gradient_boosting": {
+      "auc": 0.633,
+      "avg_precision": 0.513,
+      "recall_top20": 0.301,
+      "precision_top20": 0.533,
+      "recall_top30": 0.421,
+      "brier": 0.221
+    }
+  },
+  "final_model": "logistic_regression",
+  "out_of_fold": {
+    "auc": 0.705,
+    "avg_precision": 0.581,
+    "recall_top20": 0.351,
+    "precision_top20": 0.622,
+    "recall_top30": 0.471,
+    "brier": 0.201
+  },
+  "calibration": [
+    {
+      "predicted": 0.137,
+      "actual": 0.129,
+      "n": 249
+    },
+    {
+      "predicted": 0.239,
+      "actual": 0.281,
+      "n": 249
+    },
+    {
+      "predicted": 0.333,
+      "actual": 0.339,
+      "n": 248
+    },
+    {
+      "predicted": 0.435,
+      "actual": 0.406,
+      "n": 249
+    },
+    {
+      "predicted": 0.63,
+      "actual": 0.622,
+      "n": 249
+    }
+  ],
+  "fairness_top20": {
+    "age": [
+      {
+        "group": "35-44",
+        "n": 536,
+        "actual_miss_rate": 0.343,
+        "flag_rate": 0.198,
+        "recall_of_missed": 0.359,
+        "auc": 0.726
+      },
+      {
+        "group": "45+",
+        "n": 319,
+        "actual_miss_rate": 0.351,
+        "flag_rate": 0.16,
+        "recall_of_missed": 0.304,
+        "auc": 0.73
+      },
+      {
+        "group": "<35",
+        "n": 389,
+        "actual_miss_rate": 0.375,
+        "flag_rate": 0.237,
+        "recall_of_missed": 0.377,
+        "auc": 0.657
+      }
+    ],
+    "distance": [
+      {
+        "group": "5-10km",
+        "n": 427,
+        "actual_miss_rate": 0.368,
+        "flag_rate": 0.197,
+        "recall_of_missed": 0.312,
+        "auc": 0.675
+      },
+      {
+        "group": "<5km",
+        "n": 598,
+        "actual_miss_rate": 0.279,
+        "flag_rate": 0.067,
+        "recall_of_missed": 0.114,
+        "auc": 0.652
+      },
+      {
+        "group": ">10km",
+        "n": 219,
+        "actual_miss_rate": 0.539,
+        "flag_rate": 0.571,
+        "recall_of_missed": 0.737,
+        "auc": 0.732
+      }
+    ],
+    "income_band": [
+      {
+        "group": "highest",
+        "n": 170,
+        "actual_miss_rate": 0.212,
+        "flag_rate": 0.024,
+        "recall_of_missed": 0.083,
+        "auc": 0.709
+      },
+      {
+        "group": "lowest",
+        "n": 557,
+        "actual_miss_rate": 0.422,
+        "flag_rate": 0.298,
+        "recall_of_missed": 0.426,
+        "auc": 0.657
+      },
+      {
+        "group": "middle",
+        "n": 517,
+        "actual_miss_rate": 0.331,
+        "flag_rate": 0.153,
+        "recall_of_missed": 0.304,
+        "auc": 0.712
+      }
+    ]
+  },
+  "note": "Synthetic data. Numbers show the pipeline works, not real-world accuracy."
+}

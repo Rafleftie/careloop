@@ -1,0 +1,68 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+<meta charset="utf-8"/>
+<meta name="viewport" content="width=device-width, initial-scale=1.0"/>
+<title>{% block title %}CareLoop{% endblock %}</title>
+<link href="https://fonts.googleapis.com/css2?family=Material+Symbols+Outlined:opsz,wght,FILL,GRAD@20..48,100..700,0..1,-50..200" rel="stylesheet"/>
+<link href="https://fonts.googleapis.com/css2?family=Inter:wght@400;500;600;700&family=Nunito+Sans:wght@600;700;800&display=swap" rel="stylesheet"/>
+<script src="https://cdn.tailwindcss.com"></script>
+<script src="/static/tailwind.config.js"></script>
+<style>
+  body { overscroll-behavior: none; }
+  .material-symbols-outlined { font-variation-settings: 'FILL' 0, 'wght' 400, 'GRAD' 0, 'opsz' 24; }
+</style>
+</head>
+<body class="bg-surface font-body-md text-body-md text-on-surface">
+<header class="fixed top-0 w-full h-16 z-50 bg-surface-container-lowest/90 backdrop-blur-xl shadow-[0_1px_8px_rgba(0,0,0,0.04)]">
+  <div class="h-16 w-full px-gutter-desktop flex items-center justify-between gap-space-md">
+    <div class="flex items-center gap-space-lg">
+      <a href="/dashboard" class="flex items-center gap-space-sm">
+        <div class="w-9 h-9 rounded-lg bg-primary flex items-center justify-center"><span class="material-symbols-outlined text-on-primary text-[22px]">all_inclusive</span></div>
+        <span class="font-headline-md text-headline-md text-primary tracking-tight">CareLoop</span>
+      </a>
+      <div class="h-6 w-[1px] bg-surface-variant hidden md:block"></div>
+      <div class="hidden md:flex items-center gap-space-xs px-space-sm py-1.5 rounded-lg bg-surface-container-low">
+        <span class="material-symbols-outlined text-[18px] text-primary">local_hospital</span>
+        <span class="font-label-sm text-label-sm text-on-surface">{{ facility }}</span>
+      </div>
+    </div>
+    <nav class="hidden lg:flex items-center gap-space-xs">
+      {% for key, label, href in [('dashboard','Dashboard','/dashboard'),('patients','Patients','/patients'),('outbox','Outbox','/outbox')] %}
+      <a href="{{ href }}" class="px-space-md py-2 rounded-lg font-label-md text-label-md transition-colors {% if active == key %}bg-primary text-on-primary font-bold shadow-sm{% else %}text-on-surface-variant hover:bg-surface-container hover:text-on-surface{% endif %}">{{ label }}</a>
+      {% endfor %}
+    </nav>
+    <div class="flex items-center gap-space-sm">
+      <span class="hidden sm:inline-flex px-3 py-1 rounded-full bg-amber-100 text-amber-800 font-label-sm text-label-sm">Demo: synthetic data</span>
+      <div class="w-8 h-8 rounded-full bg-primary flex items-center justify-center"><span class="material-symbols-outlined text-on-primary text-[18px]">person</span></div>
+      <div class="hidden xl:flex flex-col text-left">
+        <span class="font-label-sm text-label-sm text-on-surface leading-tight">{{ coordinator }}</span>
+        <span class="font-label-sm text-on-surface-variant text-[11px] leading-tight">Care Coordinator</span>
+      </div>
+    </div>
+  </div>
+</header>
+
+<aside class="fixed left-0 top-16 bottom-0 w-64 bg-surface-container-low/70 backdrop-blur-md z-40 hidden md:flex flex-col justify-between py-space-lg px-space-md">
+  <div class="flex flex-col gap-space-xs">
+    <div class="px-space-sm py-1 mb-space-xs"><span class="font-label-sm text-label-sm text-on-surface-variant uppercase tracking-wider">Clinical Workflow</span></div>
+    <nav class="flex flex-col gap-1">
+      {% for key, label, href, icon in [('dashboard','Dashboard','/dashboard','grid_view'),('patients','Patients','/patients','person_search'),('outbox','Outbox','/outbox','sms')] %}
+      <a href="{{ href }}" class="flex items-center gap-space-sm px-space-sm py-2.5 rounded-lg font-label-md text-label-md transition-colors {% if active == key %}bg-primary-container text-on-primary font-bold{% else %}text-on-surface-variant hover:bg-surface-container hover:text-on-surface{% endif %}">
+        <span class="material-symbols-outlined text-[20px]">{{ icon }}</span><span>{{ label }}</span>
+      </a>
+      {% endfor %}
+    </nav>
+  </div>
+  <div class="p-space-sm rounded-xl bg-surface-container-lowest shadow-[0_1px_8px_rgba(0,0,0,0.04)]">
+    <span class="font-label-sm text-label-sm text-on-surface-variant text-[12px]">All patients, scores and messages in this demo are synthetic. SMS sending is simulated.</span>
+  </div>
+</aside>
+
+<div class="md:pl-64">
+  <main class="relative pt-16 min-h-screen bg-surface">
+    {% block content %}{% endblock %}
+  </main>
+</div>
+</body>
+</html>

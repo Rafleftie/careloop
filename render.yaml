@@ -1,0 +1,9 @@
+# Optional: lets Render create the service from this file (New > Blueprint).
+# You can also create the Web Service by hand with the same two commands.
+services:
+  - type: web
+    name: careloop
+    runtime: python
+    plan: free
+    buildCommand: pip install -r requirements.txt
+    startCommand: uvicorn app.main:app --host 0.0.0.0 --port $PORT

@@ -1,0 +1,170 @@
+{% extends "base.html" %}
+{% block title %}{{ d.name }} · CareLoop{% endblock %}
+{% block content %}
+<div class="w-full max-w-7xl mx-auto px-margin md:px-margin-tablet lg:px-margin-desktop py-space-lg space-y-space-lg">
+
+  <!-- Breadcrumb -->
+  <div class="flex flex-wrap items-center justify-between gap-space-sm">
+    <div class="flex items-center gap-space-xs text-on-surface-variant font-label-md text-label-md">
+      <a class="inline-flex items-center gap-1.5 px-space-sm py-2 rounded-lg bg-surface-container-low text-primary hover:bg-surface-container" href="/patients"><span class="material-symbols-outlined text-[18px]">arrow_back</span><span class="font-semibold">Back to Patients at Risk</span></a>
+      <span class="text-on-surface font-semibold">{{ d.name }}</span>
+      <span class="px-2 py-0.5 rounded-full bg-surface-container-high text-[11px] font-semibold">{{ d.code }}</span>
+    </div>
+    <div class="flex items-center gap-space-sm">
+      <a href="/patient/{{ d.referral_id }}" class="inline-flex items-center gap-1.5 px-3 py-2 rounded-lg bg-primary/10 text-primary font-label-sm text-label-sm font-bold min-h-[40px]"><span class="material-symbols-outlined text-[18px]">smartphone</span>Open patient app view</a>
+      <span class="inline-flex items-center gap-1 px-2.5 py-1.5 rounded-full bg-surface-container-low text-on-surface-variant font-label-sm text-label-sm"><span class="material-symbols-outlined text-[16px] text-primary">calendar_today</span>{{ today }}</span>
+    </div>
+  </div>
+
+  <!-- Header -->
+  <div class="rounded-xl bg-surface-container-lowest p-space-lg shadow-sm flex flex-col lg:flex-row lg:items-center justify-between gap-space-lg">
+    <div class="flex flex-col gap-space-sm max-w-2xl">
+      <div class="flex flex-wrap items-center gap-space-sm">
+        <h1 class="font-headline-lg text-headline-lg font-extrabold tracking-tight">{{ d.name }}</h1>
+        <span class="inline-flex items-center px-3 py-1 rounded-full {{ d.style.chip }} font-label-sm text-label-sm font-bold">{{ d.risk_level }} drop-off risk</span>
+        <span class="inline-flex items-center px-3 py-1 rounded-full bg-surface-container-high text-on-surface-variant font-label-sm text-label-sm font-semibold">{{ d.screening_type }} screening</span>
+      </div>
+      <div class="flex flex-wrap items-center gap-x-space-md gap-y-1.5 text-on-surface-variant font-body-sm text-body-sm">
+        <span>{{ d.age }} yrs</span><span>•</span><span>{{ d.ward }} ward</span><span>•</span><span>{{ d.distance_km }} km from the hospital</span><span>•</span><span class="font-mono text-[13px]">{{ d.phone }}</span>
+      </div>
+      <div class="pt-2 flex flex-wrap items-center gap-space-md">
+        <div class="inline-flex items-center gap-2 px-3 py-1.5 rounded-lg bg-surface-container-low font-label-sm text-label-sm">Result: <strong>Needs follow-up</strong></div>
+        <div class="inline-flex items-center gap-2 px-3 py-1.5 rounded-lg bg-primary/10 font-label-sm text-label-sm">CHW: <strong class="text-primary">{{ d.chw }}</strong> ({{ d.ward }})</div>
+        {% if d.rescheduled %}<div class="inline-flex items-center gap-2 px-3 py-1.5 rounded-lg bg-amber-100 text-amber-900 font-label-sm text-label-sm">Patient changed the visit: <strong>{{ reason_label }}</strong></div>{% endif %}
+        <div class="inline-flex items-center gap-2 px-3 py-1.5 rounded-lg bg-surface-container-low font-label-sm text-label-sm">SMS: <strong>{{ 'on' if consent.sms else 'off' }}</strong> • CHW sharing: <strong>{{ 'on' if consent.chw else 'off' }}</strong>{% if not consent.recorded %} <span class="text-on-surface-variant">(clinic defaults)</span>{% endif %}</div>
+      </div>
+    </div>
+    <div class="flex-shrink-0 flex items-center gap-space-md p-space-md rounded-xl {{ d.style.soft }}">
+      <div class="relative w-20 h-20 flex items-center justify-center">
+        <svg class="w-20 h-20 -rotate-90" viewBox="0 0 72 72">
+          <circle class="stroke-surface-container-highest" cx="36" cy="36" fill="none" r="30" stroke-width="7"></circle>
+          <circle class="{{ d.style.bar }}" cx="36" cy="36" fill="none" r="30" stroke-dasharray="188.5" stroke-dashoffset="{{ dash }}" stroke-linecap="round" stroke-width="7"></circle>
+        </svg>
+        <div class="absolute inset-0 flex items-center justify-center"><span class="font-headline-md text-headline-md font-extrabold {{ d.style.text }}">{{ d.pct }}%</span></div>
+      </div>
+      <div class="flex flex-col max-w-[170px]">
+        <span class="font-label-md text-label-md font-extrabold">{{ d.risk_level }} risk</span>
+        <span class="font-body-sm text-body-sm text-on-surface-variant text-[12px] leading-snug mt-1">Predicted chance of missing the visit</span>
+      </div>
+    </div>
+  </div>
+
+  <!-- Journey -->
+  <div class="p-space-lg rounded-xl bg-surface-container-lowest shadow-sm flex flex-col gap-space-md">
+    <div class="flex items-center justify-between flex-wrap gap-space-sm">
+      <div><span class="font-label-sm text-label-sm uppercase tracking-wider text-primary font-bold">Care pathway</span><h2 class="font-headline-md text-headline-md">Screening to treatment progress</h2></div>
+      {% if d.prior_missed %}<span class="inline-flex items-center gap-1 px-3 py-1 rounded-full bg-amber-100 text-amber-800 font-label-sm text-label-sm font-semibold">Earlier missed visit(s): {{ d.prior_missed }}</span>{% endif %}
+    </div>
+    <div class="grid grid-cols-1 md:grid-cols-4 gap-space-sm">
+      <div class="p-space-md rounded-xl bg-surface-container-low flex flex-col gap-1"><div class="flex justify-between"><span class="w-8 h-8 rounded-full bg-secondary text-on-secondary flex items-center justify-center"><span class="material-symbols-outlined text-[18px]">check</span></span><span class="font-label-sm text-secondary font-bold">Completed</span></div><span class="font-label-md font-bold mt-1">1. Screened</span><span class="text-on-surface-variant text-[13px]">{{ d.screened_label }}</span></div>
+      <div class="p-space-md rounded-xl bg-surface-container-low flex flex-col gap-1"><div class="flex justify-between"><span class="w-8 h-8 rounded-full bg-secondary text-on-secondary flex items-center justify-center"><span class="material-symbols-outlined text-[18px]">check</span></span><span class="font-label-sm text-secondary font-bold">Completed</span></div><span class="font-label-md font-bold mt-1">2. Referred</span><span class="text-on-surface-variant text-[13px]">{{ d.referred_label }} • {{ d.days_since_ref }} days ago</span></div>
+      <div class="p-space-md rounded-xl bg-primary-container text-on-primary shadow-md flex flex-col gap-1"><div class="flex justify-between items-center"><span class="w-8 h-8 rounded-full bg-on-primary text-primary-container flex items-center justify-center font-bold text-[14px]">3</span><span class="px-2.5 py-0.5 rounded-full {{ 'bg-error text-on-error' if d.risk_level == 'High' else 'bg-amber-400 text-amber-950' if d.risk_level == 'Medium' else 'bg-emerald-300 text-emerald-950' }} text-[11px] font-extrabold uppercase">{{ 'At risk' if d.risk_level != 'Low' else 'On track' }}</span></div><span class="font-label-md font-extrabold mt-1">3. Clinic visit</span><span class="text-on-primary-container text-[13px] font-semibold">{{ d.appt_label }}, {{ d.appt_time }}</span><span class="text-[12px]">In {{ d.days_to_appt }} days</span></div>
+      <div class="p-space-md rounded-xl bg-surface-container-low/60 opacity-75 flex flex-col gap-1"><div class="flex justify-between"><span class="w-8 h-8 rounded-full bg-surface-variant text-on-surface-variant flex items-center justify-center font-bold text-[14px]">4</span><span class="font-label-sm text-on-surface-variant font-semibold">Upcoming</span></div><span class="font-label-md font-semibold mt-1">4. Treatment</span><span class="text-on-surface-variant text-[13px]">Decided at the visit</span></div>
+    </div>
+  </div>
+
+  <div class="grid grid-cols-1 lg:grid-cols-12 gap-space-lg items-start">
+    <!-- Left -->
+    <div class="lg:col-span-7 space-y-space-lg">
+      <div class="p-space-lg rounded-xl bg-surface-container-lowest shadow-sm flex flex-col gap-space-md">
+        <div><span class="font-label-sm text-label-sm uppercase tracking-wider text-secondary font-bold">Predictive risk assessment</span>
+          <h3 class="font-headline-md text-headline-md font-bold">Why was this patient flagged?</h3>
+          <p class="font-body-sm text-body-sm text-on-surface-variant mt-0.5">Each bar shows how many points of risk a factor adds compared with an average patient.</p></div>
+        {% for r in d.reasons %}
+        <div class="p-space-md rounded-xl bg-surface-container-low flex flex-col gap-space-xs">
+          <div class="flex items-center justify-between"><span class="font-label-md text-label-md font-bold">{{ r.text }}</span><span class="font-mono text-label-md font-bold {{ d.style.text }}">+{{ r.points }} pts</span></div>
+          <div class="w-full h-2 rounded-full bg-surface-variant overflow-hidden"><div class="h-full rounded-full {{ {'High':'bg-error','Medium':'bg-amber-500','Low':'bg-emerald-500'}[d.risk_level] }}" style="width: {{ r.width }}%"></div></div>
+        </div>
+        {% else %}
+        <p class="font-body-sm text-on-surface-variant">No single factor stands out. This patient is low risk.</p>
+        {% endfor %}
+        <div class="p-space-md rounded-lg bg-surface-container-high/60 flex items-start gap-space-sm">
+          <span class="material-symbols-outlined text-primary text-[20px] mt-0.5">verified_user</span>
+          <p class="font-body-sm text-body-sm text-on-surface-variant text-[12px] leading-relaxed"><strong class="text-on-surface">How to read this:</strong> the score supports, but does not replace, the health worker's judgment. A high score means this patient gets <em>more</em> support, never less priority for care. Fairness across age, distance and income was checked when the model was evaluated.</p>
+        </div>
+      </div>
+
+      <div class="p-space-lg rounded-xl bg-surface-container-lowest shadow-sm flex flex-col gap-space-md">
+        <div class="flex items-center justify-between"><div><span class="font-label-sm text-label-sm uppercase tracking-wider text-secondary font-bold">Engagement log</span><h3 class="font-headline-md text-headline-md font-bold">Contact and care timeline</h3></div>
+          <span class="px-2.5 py-1 rounded-full bg-surface-container-low font-mono text-[12px] font-semibold">{{ events|length }} events</span></div>
+        <div class="relative pl-6 space-y-space-md pt-2">
+          <div class="absolute left-2.5 top-3 bottom-3 w-0.5 bg-surface-variant"></div>
+          {% for e in events %}
+          <div class="relative flex items-start gap-space-sm">
+            <div class="absolute -left-6 top-0.5 w-5 h-5 rounded-full {{ 'bg-secondary text-on-secondary' if e.tone == 'ok' else 'bg-amber-100 text-amber-800' }} flex items-center justify-center"><span class="material-symbols-outlined text-[13px]">{{ e.icon }}</span></div>
+            <div class="p-space-sm rounded-lg bg-surface-container-low flex-1 flex flex-col gap-0.5">
+              <div class="flex flex-wrap items-center justify-between gap-1"><span class="font-label-sm font-bold">{{ e.title }}</span><span class="font-mono text-[11px] text-on-surface-variant">{{ e.label }}</span></div>
+              <p class="text-on-surface-variant text-[13px]">{{ e.text }}</p>
+            </div>
+          </div>
+          {% endfor %}
+        </div>
+      </div>
+    </div>
+
+    <!-- Right -->
+    <div class="lg:col-span-5 space-y-space-lg">
+      <div class="p-space-lg rounded-xl bg-surface-container-lowest shadow-sm flex flex-col gap-space-md">
+        <div class="flex items-center gap-space-xs text-primary font-label-sm text-label-sm font-bold uppercase tracking-wider"><span class="material-symbols-outlined text-[18px]">recommend</span>Recommended next step</div>
+        <div class="p-space-md rounded-xl bg-secondary-container/30">
+          <h4 class="font-headline-md text-headline-md font-extrabold leading-snug">{{ d.rec.title }}</h4>
+          <p class="font-body-sm text-body-sm text-on-surface-variant mt-1.5 leading-relaxed">{{ d.rec.detail }}</p>
+        </div>
+        <div class="flex flex-col gap-space-sm">
+          <button data-action="{{ d.rec.type }}" class="act h-12 w-full px-space-md rounded-lg bg-primary text-on-primary font-label-md font-bold flex items-center justify-center gap-2 hover:bg-primary-container transition-colors">{{ d.rec.button }}</button>
+          {% if d.rec.type != 'call' %}<button data-action="call" class="act h-12 w-full rounded-lg bg-surface-container text-primary font-label-md font-bold hover:bg-surface-variant transition-colors">Log a phone call</button>{% endif %}
+          {% if d.rec.type != 'assign_visit' %}<button data-action="assign_visit" class="act h-12 w-full rounded-lg bg-surface-container text-primary font-label-md font-bold hover:bg-surface-variant transition-colors">Assign home visit ({{ d.chw.split()[0] }})</button>{% endif %}
+          <button data-action="mark_attended" class="act h-12 w-full rounded-lg bg-surface-container-low text-on-surface-variant font-label-md font-semibold hover:bg-surface-container transition-colors">Mark as attended</button>
+        </div>
+        <div id="feedback" class="hidden p-space-sm rounded-lg bg-emerald-50 text-emerald-800 font-label-sm items-center gap-2"><span class="material-symbols-outlined text-[18px]">check_circle</span><span id="feedback-text"></span></div>
+      </div>
+
+      <div class="p-space-lg rounded-xl bg-surface-container-lowest shadow-sm flex flex-col gap-space-md">
+        <div><span class="font-label-sm text-label-sm uppercase tracking-wider text-secondary font-bold">Confidential messaging</span>
+          <h3 class="font-headline-md text-headline-md font-bold">SMS preview</h3>
+          <p class="font-body-sm text-on-surface-variant text-[13px] mt-0.5">The message does not name any condition. Sending is simulated in this demo.</p></div>
+        <div class="p-space-md rounded-xl bg-surface-container-low flex flex-col gap-space-xs">
+          <div class="flex items-center justify-between text-[11px] font-mono text-on-surface-variant"><span>SENDER: CareLoop</span><span id="seg-label">{{ d.sms.en_len }} characters • {{ d.sms.en_seg }} segment{{ 's' if d.sms.en_seg > 1 }}</span></div>
+          <div id="sms-text" class="p-space-md rounded-xl bg-surface-container-lowest font-body-sm text-body-sm leading-relaxed">{{ d.sms.en }}</div>
+          <div class="flex gap-2 pt-1">
+            <button id="tab-en" class="px-3 py-1 rounded-full bg-primary text-on-primary text-[12px] font-bold">English</button>
+            <button id="tab-sw" class="px-3 py-1 rounded-full bg-surface-container text-on-surface-variant text-[12px] font-bold">Kiswahili</button>
+          </div>
+        </div>
+        <button id="send-sms" class="h-12 rounded-lg bg-primary-container text-on-primary font-label-md font-bold hover:bg-primary transition-colors">Send SMS (simulated)</button>
+      </div>
+    </div>
+  </div>
+</div>
+
+<script>
+  const RID = {{ d.referral_id }};
+  const SMS = { en: {{ d.sms.en|tojson }}, sw: {{ d.sms.sw|tojson }} };
+  const SEG = { en: "{{ d.sms.en_len }} characters • {{ d.sms.en_seg }} segment{{ 's' if d.sms.en_seg > 1 }}", sw: "{{ d.sms.sw_len }} characters • {{ d.sms.sw_seg }} segment{{ 's' if d.sms.sw_seg > 1 }}" };
+  let lang = "en";
+  function setLang(l) {
+    lang = l;
+    document.getElementById("sms-text").textContent = SMS[l];
+    document.getElementById("seg-label").textContent = SEG[l];
+    document.getElementById("tab-en").className = "px-3 py-1 rounded-full text-[12px] font-bold " + (l === "en" ? "bg-primary text-on-primary" : "bg-surface-container text-on-surface-variant");
+    document.getElementById("tab-sw").className = "px-3 py-1 rounded-full text-[12px] font-bold " + (l === "sw" ? "bg-primary text-on-primary" : "bg-surface-container text-on-surface-variant");
+  }
+  document.getElementById("tab-en").onclick = () => setLang("en");
+  document.getElementById("tab-sw").onclick = () => setLang("sw");
+
+  async function act(type) {
+    const res = await fetch(`/api/patients/${RID}/actions`, {
+      method: "POST", headers: { "Content-Type": "application/json" },
+      body: JSON.stringify({ type, language: lang })
+    });
+    const data = await res.json();
+    const box = document.getElementById("feedback");
+    document.getElementById("feedback-text").textContent = data.message || "Something went wrong";
+    box.classList.remove("hidden"); box.classList.add("flex");
+    if (type === "mark_attended") { setTimeout(() => location.href = "/patients", 900); }
+    else { setTimeout(() => location.reload(), 900); }
+  }
+  document.querySelectorAll(".act").forEach(b => b.onclick = () => act(b.dataset.action));
+  document.getElementById("send-sms").onclick = () => act("sms");
+</script>
+{% endblock %}

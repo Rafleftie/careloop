@@ -1,0 +1,133 @@
+{% extends "base.html" %}
+{% block title %}Dashboard · CareLoop{% endblock %}
+{% block content %}
+<div class="p-gutter md:p-gutter-desktop flex flex-col gap-space-lg max-w-[1440px] mx-auto w-full">
+
+  <div class="flex flex-col lg:flex-row lg:items-end justify-between gap-space-md">
+    <div class="flex flex-col gap-space-xs">
+      <div class="flex flex-wrap gap-space-xs">
+        <span class="px-3 py-1 rounded-full bg-primary/10 text-primary font-label-sm text-label-sm">{{ month }}</span>
+        <span class="px-3 py-1 rounded-full bg-surface-container-high text-on-surface-variant font-label-sm text-label-sm">Cervical screening follow-up</span>
+      </div>
+      <h1 class="font-headline-xl text-headline-xl tracking-tight">Coordinator Overview</h1>
+      <p class="font-body-md text-body-md text-on-surface-variant max-w-2xl">Where patients are lost between a screening result and treatment, and who to help first. Facility: {{ facility }}.</p>
+    </div>
+    <a href="/patients" class="inline-flex items-center gap-space-xs px-5 py-3 rounded-lg bg-primary text-on-primary font-label-md text-label-md hover:bg-primary-container transition-colors min-h-[48px] shadow-sm self-start lg:self-auto">
+      <span class="material-symbols-outlined text-[20px]">person_search</span><span>View patients at risk</span>
+    </a>
+  </div>
+
+  <!-- Summary cards -->
+  <div class="grid grid-cols-2 xl:grid-cols-4 gap-space-md">
+    <div class="p-space-md rounded-xl bg-surface-container-lowest shadow-sm">
+      <span class="font-label-sm text-label-sm text-on-surface-variant uppercase tracking-wider">Screened</span>
+      <div class="font-headline-lg text-headline-lg mt-1">{{ "{:,}".format(casc.screened) }}</div>
+      <span class="font-body-sm text-body-sm text-on-surface-variant">Community and outpatient screening</span>
+    </div>
+    <div class="p-space-md rounded-xl bg-surface-container-lowest shadow-sm">
+      <span class="font-label-sm text-label-sm text-on-surface-variant uppercase tracking-wider">Referred for follow-up</span>
+      <div class="font-headline-lg text-headline-lg mt-1">{{ "{:,}".format(casc.referred) }}</div>
+      <span class="font-body-sm text-body-sm text-on-surface-variant">{{ casc.referral_rate }}% of those screened</span>
+    </div>
+    <div class="p-space-md rounded-xl bg-surface-container-lowest shadow-sm">
+      <span class="font-label-sm text-label-sm text-on-surface-variant uppercase tracking-wider">Attended the visit</span>
+      <div class="font-headline-lg text-headline-lg mt-1">{{ "{:,}".format(casc.attended) }}</div>
+      <span class="font-body-sm text-body-sm text-on-surface-variant">{{ casc.attend_rate }}% of those referred</span>
+    </div>
+    <a href="/patients?risk=High" class="p-space-md rounded-xl bg-error-container/40 shadow-sm hover:bg-error-container/60 transition-colors">
+      <span class="font-label-sm text-label-sm text-on-error-container uppercase tracking-wider">High risk this fortnight</span>
+      <div class="font-headline-lg text-headline-lg mt-1 text-error">{{ counts.High }}</div>
+      <span class="font-body-sm text-body-sm text-on-surface-variant">of {{ open_total }} patients with upcoming visits</span>
+    </a>
+  </div>
+
+  <!-- Cascade -->
+  <div class="p-space-lg rounded-xl bg-surface-container-lowest shadow-sm flex flex-col gap-space-md">
+    <div>
+      <span class="font-label-sm text-label-sm uppercase tracking-wider text-primary font-bold">Continuity of care cascade</span>
+      <h2 class="font-headline-md text-headline-md">Screening to treatment</h2>
+    </div>
+    <div class="grid grid-cols-1 md:grid-cols-4 gap-space-sm">
+      {% set stages = [
+        ('1. Screened', casc.screened, 100, 'Everyone screened', 'bg-primary'),
+        ('2. Referred', casc.referred, casc.referral_rate, 'Abnormal result, referred', 'bg-primary'),
+        ('3. Attended visit', casc.attended, casc.attend_rate, 'of those referred', 'bg-error'),
+        ('4. Treatment started', casc.treated, casc.treat_rate, 'of those who attended', 'bg-primary')] %}
+      {% for label, n, pct, sub, color in stages %}
+      <div class="p-space-md rounded-xl {% if loop.index == 3 %}bg-error-container/30{% else %}bg-surface-container-low{% endif %} flex flex-col gap-space-xs">
+        <div class="flex items-center justify-between">
+          <span class="font-label-sm text-label-sm uppercase tracking-wide text-on-surface-variant">{{ label }}</span>
+          <span class="font-label-sm text-label-sm font-bold {% if loop.index == 3 %}text-error{% else %}text-primary{% endif %}">{{ pct }}%</span>
+        </div>
+        <div class="font-headline-md text-headline-md">{{ "{:,}".format(n) }}</div>
+        <span class="font-body-sm text-body-sm text-on-surface-variant text-[13px]">{{ sub }}</span>
+        <div class="w-full h-2 rounded-full bg-surface-variant overflow-hidden"><div class="h-full {{ color }} rounded-full" style="width: {{ [pct,100]|min }}%"></div></div>
+      </div>
+      {% endfor %}
+    </div>
+    <div class="p-space-md rounded-lg bg-surface-container-high/60 flex flex-col md:flex-row md:items-center justify-between gap-space-sm">
+      <p class="font-body-sm text-body-sm text-on-surface-variant">
+        <strong class="text-on-surface">Biggest drop-off:</strong> {{ casc.lost_before_visit }} referred patients never reached the hospital visit. After the visit, {{ casc.lost_after_visit }} more did not start treatment.
+      </p>
+      <a href="/patients" class="inline-flex items-center justify-center px-4 py-2.5 rounded-lg bg-primary-container text-on-primary font-label-md text-label-md min-h-[48px] whitespace-nowrap">See who to contact today</a>
+    </div>
+  </div>
+
+  <!-- Live activity from the patient app and outbox -->
+  <div class="p-space-lg rounded-xl bg-surface-container-lowest shadow-sm flex flex-col gap-space-md">
+    <div>
+      <span class="font-label-sm text-label-sm uppercase tracking-wider text-secondary font-bold">Live activity</span>
+      <h2 class="font-headline-md text-headline-md">What patients and the reminder rules are doing now</h2>
+      <p class="font-body-sm text-body-sm text-on-surface-variant">Updates as patients use the app view and as you run the outbox rules.</p>
+    </div>
+    <div class="grid grid-cols-2 md:grid-cols-5 gap-space-sm">
+      {% for label, v in [('Visit changes requested', live.reschedules), ('Reminders sent (simulated)', live.reminders), ('Patients confirmed', live.confirmed), ('Escalated to CHW', live.escalated), ('Marked attended', live.attended)] %}
+      <div class="p-space-sm rounded-lg bg-surface-container-low text-center"><div class="font-headline-md text-headline-md">{{ v }}</div><div class="font-label-sm text-label-sm text-on-surface-variant">{{ label }}</div></div>
+      {% endfor %}
+    </div>
+    {% if live.reasons %}
+    <div class="flex flex-wrap gap-space-xs items-center font-body-sm text-on-surface-variant">Reasons given when changing a visit:
+      {% for r in live.reasons %}<span class="px-2.5 py-1 rounded-full bg-amber-100 text-amber-900 font-label-sm">{{ r.label }}: {{ r.n }}</span>{% endfor %}
+    </div>
+    {% endif %}
+  </div>
+
+  <div class="grid grid-cols-1 xl:grid-cols-2 gap-space-lg">
+    <!-- Why patients are lost -->
+    <div class="p-space-lg rounded-xl bg-surface-container-lowest shadow-sm flex flex-col gap-space-md">
+      <div>
+        <span class="font-label-sm text-label-sm uppercase tracking-wider text-secondary font-bold">Attrition root causes</span>
+        <h2 class="font-headline-md text-headline-md">Why referred patients missed their visit</h2>
+        <p class="font-body-sm text-body-sm text-on-surface-variant">Reasons recorded for the {{ casc.lost_before_visit }} missed visits in the history.</p>
+      </div>
+      {% for a in attr %}
+      <div class="flex flex-col gap-1">
+        <div class="flex justify-between font-label-md text-label-md"><span>{{ a.label }}</span><span class="text-on-surface-variant">{{ a.n }} ({{ a.pct }}%)</span></div>
+        <div class="w-full h-2 rounded-full bg-surface-variant overflow-hidden"><div class="h-full bg-primary-container rounded-full" style="width: {{ a.pct }}%"></div></div>
+      </div>
+      {% endfor %}
+    </div>
+
+    <!-- Model card -->
+    <div class="p-space-lg rounded-xl bg-surface-container-lowest shadow-sm flex flex-col gap-space-md">
+      <div>
+        <span class="font-label-sm text-label-sm uppercase tracking-wider text-secondary font-bold">Risk model</span>
+        <h2 class="font-headline-md text-headline-md">How well does the follow-up model work?</h2>
+        <p class="font-body-sm text-body-sm text-on-surface-variant">Trained on synthetic data to show the approach. Real-world accuracy has not been measured.</p>
+      </div>
+      {% if metrics %}
+      <div class="grid grid-cols-3 gap-space-sm">
+        <div class="p-space-sm rounded-lg bg-surface-container-low text-center"><div class="font-headline-md text-headline-md">{{ metrics.out_of_fold.auc }}</div><div class="font-label-sm text-label-sm text-on-surface-variant">AUC</div></div>
+        <div class="p-space-sm rounded-lg bg-surface-container-low text-center"><div class="font-headline-md text-headline-md">{{ (metrics.out_of_fold.recall_top20 * 100)|round|int }}%</div><div class="font-label-sm text-label-sm text-on-surface-variant">Missed visits caught in top 20%</div></div>
+        <div class="p-space-sm rounded-lg bg-surface-container-low text-center"><div class="font-headline-md text-headline-md">20%</div><div class="font-label-sm text-label-sm text-on-surface-variant">Random targeting</div></div>
+      </div>
+      <ul class="font-body-sm text-body-sm text-on-surface-variant list-disc pl-5 space-y-1">
+        <li>Model: {{ metrics.final_model.replace('_', ' ') }}, checked with 5-fold cross-validation.</li>
+        <li>Everyone gets the standard reminders. The score decides who gets <em>extra</em> support.</li>
+        <li>Known gap: patients who live close to the clinic and still miss visits are caught less often (see fairness check in the repo).</li>
+      </ul>
+      {% endif %}
+    </div>
+  </div>
+</div>
+{% endblock %}

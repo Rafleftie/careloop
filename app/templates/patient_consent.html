@@ -1,0 +1,55 @@
+{% extends "patient_base.html" %}
+{% block title %}{{ t.nav_privacy }} · CareLoop{% endblock %}
+{% block content %}
+{% macro toggle(key, title, desc, on, optional=False) %}
+<label class="flex flex-col p-space-md rounded-xl bg-surface-container-lowest shadow-sm cursor-pointer select-none" for="t-{{ key }}">
+  <div class="flex items-start justify-between gap-space-md">
+    <div class="flex flex-col min-w-0">
+      <span class="font-headline-md text-[18px] leading-snug font-bold">{{ title }}</span>
+      {% if optional %}<span class="font-label-sm text-on-surface-variant mt-0.5">{{ t.c_optional }}</span>{% endif %}
+    </div>
+    <div class="relative shrink-0 flex items-center justify-center w-14 h-12">
+      <input type="checkbox" id="t-{{ key }}" data-key="{{ key }}" class="peer sr-only" {{ 'checked' if on }} role="switch"/>
+      <div class="w-12 h-7 rounded-full bg-surface-container-highest peer-checked:bg-primary transition-colors"></div>
+      <div class="absolute left-1.5 top-3.5 w-5 h-5 rounded-full bg-white shadow-md transition-transform peer-checked:translate-x-5"></div>
+    </div>
+  </div>
+  <p class="font-body-sm text-on-surface-variant mt-space-sm leading-relaxed">{{ desc }}</p>
+</label>
+{% endmacro %}
+<div class="flex flex-col px-margin gap-space-lg pt-space-md">
+  <section class="flex flex-col items-center text-center p-space-lg rounded-xl bg-surface-container-low shadow-sm">
+    <div class="w-16 h-16 rounded-full bg-primary-fixed text-primary flex items-center justify-center mb-space-md"><span class="material-symbols-outlined fill text-[32px]">verified_user</span></div>
+    <h1 class="font-headline-md text-[22px] leading-[30px] font-bold mb-space-xs">{{ t.c_title }}</h1>
+    <p class="font-body-md text-on-surface-variant leading-relaxed">{{ t.c_intro }}</p>
+  </section>
+
+  <section class="flex flex-col gap-space-md">
+    {{ toggle('sms', t.c_sms, t.c_sms_d, consent.sms) }}
+    {{ toggle('chw', t.c_chw, t.c_chw_d.format(name=d.chw), consent.chw) }}
+    {{ toggle('research', t.c_research, t.c_research_d, consent.research, True) }}
+  </section>
+
+  <section class="flex items-start gap-space-md p-space-md rounded-xl bg-tertiary-fixed text-on-tertiary-fixed">
+    <span class="material-symbols-outlined fill text-[24px]">shield</span>
+    <div><span class="font-label-lg font-bold block mb-0.5">{{ t.c_promise_t }}</span><p class="font-body-sm leading-relaxed">{{ t.c_promise }}</p></div>
+  </section>
+
+  <div id="saved" class="hidden p-space-md rounded-xl bg-emerald-50 text-emerald-900 font-label-md flex items-center gap-2"><span class="material-symbols-outlined fill">task_alt</span>{{ t.c_saved }}</div>
+  <button id="save" class="w-full min-h-[52px] rounded-lg bg-primary-container text-on-primary font-label-lg font-semibold shadow-md hover:bg-primary transition-colors">{{ t.c_save }}</button>
+  <a href="{{ base }}?lang={{ lang }}" class="min-h-[48px] flex items-center justify-center text-primary font-label-md underline underline-offset-4">{{ t.back_home }}</a>
+</div>
+{% endblock %}
+
+{% block scripts %}
+<script>
+  document.getElementById("save").onclick = async () => {
+    const v = k => document.querySelector(`[data-key="${k}"]`).checked;
+    const res = await fetch("/api/patient/{{ rid }}/consent", {
+      method: "POST", headers: { "Content-Type": "application/json" },
+      body: JSON.stringify({ sms: v("sms"), chw: v("chw"), research: v("research") })
+    });
+    if (res.ok) { const s = document.getElementById("saved"); s.classList.remove("hidden"); s.scrollIntoView({ behavior: "smooth" }); }
+  };
+</script>
+{% endblock %}

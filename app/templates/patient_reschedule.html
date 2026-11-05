@@ -1,0 +1,121 @@
+{% extends "patient_base.html" %}
+{% block title %}{{ t.nav_appt }} · CareLoop{% endblock %}
+{% block content %}
+<div class="flex flex-col pb-24">
+  <section class="px-margin pt-space-md">
+    <div class="p-space-lg rounded-xl bg-surface-container-low shadow-sm flex flex-col items-center text-center">
+      <div class="w-14 h-14 rounded-full bg-surface-container-lowest shadow-sm flex items-center justify-center text-primary mb-space-sm"><span class="material-symbols-outlined fill text-[30px]">event_repeat</span></div>
+      <h1 class="font-headline-md text-[22px] leading-[30px] font-extrabold mb-space-xs">{{ t.rs_title }}</h1>
+      <p class="font-body-md text-on-surface-variant max-w-xs leading-relaxed">{{ t.rs_sub }}</p>
+    </div>
+  </section>
+
+  <section class="px-margin mt-space-lg">
+    <h2 class="font-headline-md text-headline-md font-bold">{{ t.rs_q }}</h2>
+    <p class="font-body-sm text-on-surface-variant mb-space-md">{{ t.rs_private }}</p>
+    <div id="reasons" role="radiogroup" class="flex flex-col gap-space-sm">
+      {% for r in reasons %}
+      <button type="button" role="radio" aria-checked="false" data-reason="{{ r }}" class="reason w-full min-h-[56px] text-left p-space-md rounded-xl bg-surface-container-lowest shadow-sm flex items-start gap-space-md transition-all active:scale-[0.99]">
+        <div class="w-10 h-10 rounded-full bg-surface-container flex-shrink-0 flex items-center justify-center text-primary"><span class="material-symbols-outlined text-[22px]">{{ icons[r] }}</span></div>
+        <div class="flex-1 min-w-0">
+          <div class="flex items-center justify-between gap-space-xs">
+            <span class="font-label-lg font-bold">{{ t['r_' ~ r] }}</span>
+            <div class="dot w-6 h-6 rounded-full bg-surface-container flex items-center justify-center shrink-0"><span class="material-symbols-outlined text-[18px] opacity-0 text-on-primary">check</span></div>
+          </div>
+          <p class="font-body-sm text-on-surface-variant mt-1">{{ t['r_' ~ r ~ '_d'] }}</p>
+        </div>
+      </button>
+      {% endfor %}
+    </div>
+  </section>
+
+  <section class="px-margin mt-space-lg">
+    <h2 class="font-headline-md text-headline-md font-bold">{{ t.rs_choose_day }}</h2>
+    <p class="font-body-sm text-on-surface-variant mb-space-md">{{ t.rs_slots_at }}</p>
+    <div id="slots" role="radiogroup" class="grid grid-cols-2 gap-space-sm">
+      {% for s in slots %}
+      <button type="button" role="radio" aria-checked="{{ 'true' if loop.first else 'false' }}" data-date="{{ s.iso }}" data-time="{{ s.time }}" data-label="{{ s.date }}, {{ s.time }}" class="slot w-full text-left p-space-md rounded-xl shadow-sm transition-all {{ 'bg-primary-container text-on-primary' if loop.first else 'bg-surface-container-lowest text-on-surface' }}">
+        <span class="block font-label-sm font-bold uppercase tracking-wide opacity-80">{{ s.tag }}</span>
+        <span class="block font-headline-md text-headline-md font-bold leading-tight mt-1">{{ s.date }}</span>
+        <span class="flex items-center gap-1 mt-1 font-label-md"><span class="material-symbols-outlined text-[16px]">schedule</span>{{ s.time }}</span>
+        <span class="inline-block mt-space-xs px-2 py-0.5 rounded-full font-label-sm text-[11px] {{ 'bg-on-primary/20' if loop.first else 'bg-surface-container text-on-surface-variant' }}">{{ t.slots_left.format(n=s.left) }}</span>
+      </button>
+      {% endfor %}
+    </div>
+  </section>
+
+  <section class="px-margin mt-space-md">
+    <div class="p-space-md rounded-xl bg-tertiary-fixed text-on-tertiary-fixed flex items-start gap-space-md">
+      <span class="material-symbols-outlined fill text-[22px]">info</span>
+      <p class="font-body-sm leading-snug">{{ t.rs_note }}</p>
+    </div>
+  </section>
+
+  <div id="done" class="hidden px-margin mt-space-md">
+    <div class="p-space-md rounded-xl bg-emerald-50 text-emerald-900 flex flex-col gap-1">
+      <strong class="font-label-lg flex items-center gap-2"><span class="material-symbols-outlined fill">task_alt</span>{{ t.rs_done }}</strong>
+      <span id="done-sub" class="font-body-sm"></span>
+      <a href="{{ base }}?lang={{ lang }}" class="mt-2 min-h-[48px] flex items-center justify-center rounded-xl bg-primary text-on-primary font-label-lg">{{ t.back_home }}</a>
+    </div>
+  </div>
+
+  <div class="fixed bottom-16 left-1/2 -translate-x-1/2 w-full max-w-md z-40 bg-surface/95 backdrop-blur-md p-space-md shadow-[0_-4px_20px_rgba(0,0,0,0.06)]">
+    <p id="hint" class="font-body-sm text-amber-800 text-center mb-2">{{ t.rs_need_reason }}</p>
+    <button id="confirm" disabled class="w-full min-h-[52px] rounded-xl bg-primary text-on-primary font-label-lg font-bold flex items-center justify-center gap-space-sm shadow-md disabled:opacity-40 disabled:cursor-not-allowed">
+      <span class="material-symbols-outlined text-[22px]">event_repeat</span><span id="confirm-label">{{ t.rs_confirm }}</span>
+    </button>
+  </div>
+</div>
+{% endblock %}
+
+{% block scripts %}
+<script>
+  let reason = null;
+  let slot = document.querySelector(".slot");
+  const confirmBtn = document.getElementById("confirm");
+
+  document.querySelectorAll(".reason").forEach(b => b.onclick = () => {
+    document.querySelectorAll(".reason").forEach(o => {
+      o.setAttribute("aria-checked", "false");
+      o.classList.remove("ring-2", "ring-primary");
+      o.querySelector(".dot").className = "dot w-6 h-6 rounded-full bg-surface-container flex items-center justify-center shrink-0";
+      o.querySelector(".dot span").classList.add("opacity-0");
+    });
+    b.setAttribute("aria-checked", "true");
+    b.classList.add("ring-2", "ring-primary");
+    b.querySelector(".dot").className = "dot w-6 h-6 rounded-full bg-primary flex items-center justify-center shrink-0";
+    b.querySelector(".dot span").classList.remove("opacity-0");
+    reason = b.dataset.reason;
+    confirmBtn.disabled = false;
+    document.getElementById("hint").classList.add("hidden");
+  });
+
+  document.querySelectorAll(".slot").forEach(b => b.onclick = () => {
+    document.querySelectorAll(".slot").forEach(o => {
+      o.setAttribute("aria-checked", "false");
+      o.classList.remove("bg-primary-container", "text-on-primary");
+      o.classList.add("bg-surface-container-lowest", "text-on-surface");
+    });
+    b.setAttribute("aria-checked", "true");
+    b.classList.remove("bg-surface-container-lowest", "text-on-surface");
+    b.classList.add("bg-primary-container", "text-on-primary");
+    slot = b;
+  });
+
+  confirmBtn.onclick = async () => {
+    if (!reason) return;
+    confirmBtn.disabled = true;
+    document.getElementById("confirm-label").textContent = "{{ t.saving }}";
+    const res = await fetch("/api/patient/{{ rid }}/reschedule", {
+      method: "POST", headers: { "Content-Type": "application/json" },
+      body: JSON.stringify({ reason, date: slot.dataset.date, time: slot.dataset.time })
+    });
+    if (!res.ok) { confirmBtn.disabled = false; document.getElementById("confirm-label").textContent = "{{ t.rs_confirm }}"; return; }
+    const data = await res.json();
+    document.getElementById("done-sub").textContent = "{{ t.rs_done_sub }}".replace("{when}", data.when);
+    document.getElementById("done").classList.remove("hidden");
+    confirmBtn.parentElement.classList.add("hidden");
+    document.getElementById("done").scrollIntoView({ behavior: "smooth" });
+  };
+</script>
+{% endblock %}

@@ -1,0 +1,82 @@
+{% extends "base.html" %}
+{% block title %}SMS Outbox · CareLoop{% endblock %}
+{% block content %}
+<div class="p-gutter md:p-gutter-desktop flex flex-col gap-space-lg max-w-[1440px] mx-auto w-full">
+  <div class="flex flex-col gap-space-xs">
+    <h1 class="font-headline-xl text-headline-xl tracking-tight">SMS Outbox</h1>
+    <p class="font-body-md text-on-surface-variant max-w-3xl">Reminders and escalation rules. Messages are <strong>simulated</strong> here: nothing is sent to a real phone. The rules respect each patient's privacy choices.</p>
+  </div>
+
+  <div id="result" class="hidden p-space-md rounded-xl bg-emerald-50 text-emerald-900 font-label-md flex items-center gap-2"><span class="material-symbols-outlined fill">task_alt</span><span id="result-text"></span></div>
+
+  <div class="grid grid-cols-1 xl:grid-cols-2 gap-space-lg">
+    <!-- Reminders -->
+    <div class="p-space-lg rounded-xl bg-surface-container-lowest shadow-sm flex flex-col gap-space-md">
+      <div>
+        <span class="font-label-sm text-label-sm uppercase tracking-wider text-secondary font-bold">Rule 1</span>
+        <h2 class="font-headline-md text-headline-md">Visit within 3 days: send a reminder</h2>
+        <p class="font-body-sm text-on-surface-variant">Skips patients who already confirmed, were reminded today, or turned SMS off.</p>
+      </div>
+      <div class="flex items-center justify-between gap-space-sm">
+        <div class="font-body-md"><strong>{{ due|length }}</strong> reminders ready{% if skipped %} • <span class="text-amber-800">{{ skipped|length }} skipped (SMS off)</span>{% endif %}</div>
+        <button data-url="/api/outbox/send-due" class="run px-5 py-3 rounded-lg bg-primary text-on-primary font-label-md min-h-[48px] disabled:opacity-40" {{ 'disabled' if not due }}>Send due reminders</button>
+      </div>
+      <ul class="divide-y divide-surface-container-high font-body-sm">
+        {% for d in due[:6] %}<li class="py-2 flex justify-between"><span>{{ d.name }} <span class="text-on-surface-variant">({{ d.ward }})</span></span><span class="text-on-surface-variant">visit {{ d.appt_short }}</span></li>{% endfor %}
+        {% if due|length > 6 %}<li class="py-2 text-on-surface-variant">and {{ due|length - 6 }} more</li>{% endif %}
+        {% if not due %}<li class="py-2 text-on-surface-variant">No reminders due right now.</li>{% endif %}
+      </ul>
+    </div>
+
+    <!-- Escalation -->
+    <div class="p-space-lg rounded-xl bg-surface-container-lowest shadow-sm flex flex-col gap-space-md">
+      <div>
+        <span class="font-label-sm text-label-sm uppercase tracking-wider text-secondary font-bold">Rule 2</span>
+        <h2 class="font-headline-md text-headline-md">No reply to 2 reminders: escalate to the CHW</h2>
+        <p class="font-body-sm text-on-surface-variant">Only patients who agreed to share their referral with their community health worker are escalated.</p>
+      </div>
+      <div class="flex items-center justify-between gap-space-sm">
+        <div class="font-body-md"><strong>{{ escalate|length }}</strong> to escalate{% if blocked %} • <span class="text-amber-800">{{ blocked|length }} need a nurse call (no CHW consent)</span>{% endif %}</div>
+        <button data-url="/api/outbox/escalate" class="run px-5 py-3 rounded-lg bg-primary text-on-primary font-label-md min-h-[48px] disabled:opacity-40" {{ 'disabled' if not escalate }}>Escalate now</button>
+      </div>
+      <ul class="divide-y divide-surface-container-high font-body-sm">
+        {% for d in escalate[:6] %}<li class="py-2 flex justify-between"><a class="text-primary font-medium" href="/patients/{{ d.referral_id }}">{{ d.name }}</a><span class="text-on-surface-variant">{{ d.n_out }} reminders, no reply → {{ d.chw.split()[0] }}</span></li>{% endfor %}
+        {% for d in blocked[:4] %}<li class="py-2 flex justify-between"><a class="text-primary font-medium" href="/patients/{{ d.referral_id }}">{{ d.name }}</a><span class="text-amber-800">no CHW consent: call instead</span></li>{% endfor %}
+        {% if not escalate and not blocked %}<li class="py-2 text-on-surface-variant">Nobody needs escalation right now.</li>{% endif %}
+      </ul>
+    </div>
+  </div>
+
+  <!-- Log -->
+  <div class="bg-surface-container-lowest rounded-xl shadow-sm overflow-hidden">
+    <div class="p-space-md"><h2 class="font-headline-md text-headline-md">Message log</h2><p class="font-body-sm text-on-surface-variant">Latest 25 messages. Replies from patients appear on the right.</p></div>
+    <div class="overflow-x-auto">
+      <table class="w-full text-left border-collapse">
+        <thead><tr class="bg-primary-container text-on-primary font-label-sm uppercase tracking-wider"><th class="py-3 px-4">When</th><th class="py-3 px-3">Patient</th><th class="py-3 px-3">Direction</th><th class="py-3 px-3">Message</th><th class="py-3 px-3">Status</th></tr></thead>
+        <tbody class="divide-y divide-surface-container-high font-body-sm">
+          {% for m in log %}
+          <tr class="{{ 'bg-surface-container-low/30' if loop.index is even else '' }}">
+            <td class="py-3 px-4 whitespace-nowrap text-on-surface-variant">{{ m.when }}</td>
+            <td class="py-3 px-3 font-medium">{{ m.name }}</td>
+            <td class="py-3 px-3"><span class="px-2 py-0.5 rounded-full text-[11px] font-bold {{ 'bg-surface-container text-on-surface-variant' if m.direction == 'out' else 'bg-emerald-100 text-emerald-800' }}">{{ 'Sent' if m.direction == 'out' else 'Reply' }}</span></td>
+            <td class="py-3 px-3 max-w-[420px] truncate">{{ m.text }}</td>
+            <td class="py-3 px-3 text-on-surface-variant">{{ m.status }}</td>
+          </tr>
+          {% endfor %}
+        </tbody>
+      </table>
+    </div>
+  </div>
+</div>
+<script>
+  document.querySelectorAll(".run").forEach(b => b.onclick = async () => {
+    b.disabled = true;
+    const res = await fetch(b.dataset.url, { method: "POST" });
+    const d = await res.json();
+    const parts = Object.entries(d).map(([k, v]) => `${k.replaceAll("_", " ")}: ${v}`);
+    document.getElementById("result-text").textContent = parts.join(" • ");
+    document.getElementById("result").classList.remove("hidden");
+    setTimeout(() => location.reload(), 1400);
+  });
+</script>
+{% endblock %}
